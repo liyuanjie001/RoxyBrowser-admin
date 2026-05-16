@@ -1,0 +1,145 @@
+import type { PromotionLink, RegisteredUser, SiteTraffic, Coupon } from '@/types';
+import type { User } from '@/auth/permissions';
+
+export const mockUsers: User[] = [
+  { id: 'u-ceo', name: '超级管理员', realName: '陈国栋', username: 'chengd', role: 'CEO' },
+  { id: 'u-op', name: '管理员', realName: '李思雨', username: 'lisiyu', role: 'OPERATION' },
+  { id: 'u-viewer', name: '查看者', realName: '周明', username: 'zhouming', role: 'VIEWER' },
+  { id: 'u-sales-1', name: '电销/技术支持', realName: '赵小峰', username: 'zhaoxf', role: 'TELESALES' },
+  { id: 'u-staff', name: '非运营内部人员', realName: '孙婷', username: 'sunting', role: 'NON_OPERATION' },
+];
+
+export const mockPromotionLinks: PromotionLink[] = [
+  {
+    id: 'pl-001',
+    ownerId: 'u-op',
+    ownerName: '李思雨',
+    name: '春季官网活动',
+    code: 'SPRING25',
+    url: 'https://roxybrowser.com/?ref=SPRING25',
+    channel: 'WEBSITE',
+    remark: '主推页',
+    createdAt: '2026-04-01 10:20',
+    visits: 12480,
+    registrations: 824,
+    payments: 196,
+    revenue: 38420,
+  },
+  {
+    id: 'pl-002',
+    ownerId: 'u-op',
+    ownerName: '李思雨',
+    name: '抖音种草',
+    code: 'DY-ZS',
+    url: 'https://roxybrowser.com/?ref=DY-ZS',
+    channel: 'DOUYIN',
+    remark: '短视频投放',
+    createdAt: '2026-04-08 14:11',
+    visits: 8721,
+    registrations: 612,
+    payments: 138,
+    revenue: 26930,
+  },
+  {
+    id: 'pl-003',
+    ownerId: 'u-sales-1',
+    ownerName: '赵小峰',
+    name: '电销私域链接',
+    code: 'TS-001',
+    url: 'https://roxybrowser.com/?ref=TS-001',
+    channel: 'WECHAT',
+    remark: '私域池',
+    createdAt: '2026-04-15 09:00',
+    visits: 1340,
+    registrations: 92,
+    payments: 18,
+    revenue: 3420,
+  },
+  {
+    id: 'pl-004',
+    ownerId: 'u-sales-1',
+    ownerName: '赵小峰',
+    name: '电销线索-A',
+    code: 'TS-002',
+    url: 'https://roxybrowser.com/?ref=TS-002',
+    channel: 'WECHAT',
+    remark: '',
+    createdAt: '2026-04-20 11:30',
+    visits: 980,
+    registrations: 71,
+    payments: 12,
+    revenue: 2120,
+  },
+  {
+    id: 'pl-005',
+    ownerId: 'u-ceo',
+    ownerName: '陈国栋',
+    name: '小红书联合推广',
+    code: 'XHS-MAY',
+    url: 'https://roxybrowser.com/?ref=XHS-MAY',
+    channel: 'XIAOHONGSHU',
+    createdAt: '2026-05-02 16:45',
+    visits: 4120,
+    registrations: 298,
+    payments: 64,
+    revenue: 12180,
+  },
+];
+
+export const mockRegisteredUsers: RegisteredUser[] = [
+  { id: 'ru-001', phone: '13900000001', linkId: 'pl-001', registeredAt: '2026-05-10 09:21', paidAmount: 4 },
+  { id: 'ru-002', phone: '13900000002', linkId: 'pl-001', registeredAt: '2026-05-10 11:08', paidAmount: null },
+  { id: 'ru-003', phone: '13900000003', linkId: 'pl-002', registeredAt: '2026-05-11 13:45', paidAmount: 12 },
+  { id: 'ru-004', phone: '13900000004', linkId: 'pl-003', registeredAt: '2026-05-11 15:30', paidAmount: null },
+  { id: 'ru-005', phone: '13900000005', linkId: 'pl-003', registeredAt: '2026-05-12 08:50', paidAmount: 8 },
+  { id: 'ru-006', phone: '13900000006', linkId: 'pl-004', registeredAt: '2026-05-12 10:14', paidAmount: null },
+  { id: 'ru-007', phone: '13900000007', linkId: 'pl-005', registeredAt: '2026-05-12 14:22', paidAmount: 20 },
+  { id: 'ru-008', phone: '13900000008', linkId: 'pl-002', registeredAt: '2026-05-13 09:11', paidAmount: 6 },
+];
+
+export const mockTraffic: SiteTraffic[] = [
+  {
+    site: 'COM',
+    visits: 184320,
+    registrations: 6420,
+    sources: [
+      { source: '搜索引擎', visits: 88410, percent: 48 },
+      { source: '直接访问', visits: 42390, percent: 23 },
+      { source: '社交媒体', visits: 31330, percent: 17 },
+      { source: '外部推广链接', visits: 22190, percent: 12 },
+    ],
+  },
+  {
+    site: 'CN',
+    visits: 96210,
+    registrations: 3180,
+    sources: [
+      { source: '百度搜索', visits: 42330, percent: 44 },
+      { source: '直接访问', visits: 19240, percent: 20 },
+      { source: '微信生态', visits: 17320, percent: 18 },
+      { source: '外部推广链接', visits: 17320, percent: 18 },
+    ],
+  },
+];
+
+export const mockCoupons: Coupon[] = [
+  {
+    id: 'cp-001',
+    type: 'FULL_REDUCTION',
+    name: '满 200 减 30',
+    threshold: 200,
+    amount: 30,
+    validFrom: '2026-05-01',
+    validTo: '2026-06-30',
+    createdAt: '2026-04-25 14:00',
+  },
+  {
+    id: 'cp-002',
+    type: 'DISCOUNT',
+    name: '8.5 折优惠券',
+    discountPercent: 85,
+    validFrom: '2026-05-10',
+    validTo: '2026-05-31',
+    createdAt: '2026-05-05 10:30',
+  },
+];
