@@ -10,20 +10,46 @@ export const ChannelLabel: Record<Channel, string> = {
   OTHER: '其他',
 };
 
+export type UserIdentity = '创始用户' | '高级合作伙伴' | '特邀用户' | '新用户';
+export const USER_IDENTITIES: UserIdentity[] = ['创始用户', '高级合作伙伴', '特邀用户', '新用户'];
+
+export type LinkType = 'Link A' | 'Link B' | 'Link C';
+export const LINK_TYPES: LinkType[] = ['Link A', 'Link B', 'Link C'];
+
 export interface PromotionLink {
   id: string;
   ownerId: string;
   ownerName: string;
+  ownerUsername: string;
   name: string;
   code: string;
+  inviteId: string;
   url: string;
   channel: Channel;
+  utmSource: string;
+  utmMedium: string;
+  utmCampaign: string;
+  utmContent?: string;
+  utmTerm?: string;
+  bdCode?: string;
   remark?: string;
   createdAt: string;
   visits: number;
   registrations: number;
   payments: number;
   revenue: number;
+  identity: UserIdentity;
+  ownedUserCount: number;
+  subscriberCount: number | null;
+  totalRecharge: number;
+  recharge30d: number;
+  withdrawable: number;
+  withdrawn: number;
+  linkType: LinkType;
+  rebateNonAgent: number;
+  rebateAgent: number;
+  userDiscount: number;
+  modified: boolean;
 }
 
 export interface RegisteredUser {
@@ -57,6 +83,21 @@ export interface DiscountCoupon extends CouponBase {
 }
 
 export type Coupon = FullReductionCoupon | DiscountCoupon;
+
+export type UserSource = '直接注册' | '谷歌注册' | 'github注册' | null;
+
+export interface EndUser {
+  id: number;
+  username: string;
+  email: string | null;
+  phone: string | null;
+  identity: UserIdentity;
+  discountPercent: number;
+  totalRecharge: number;
+  balance: number;
+  source: UserSource;
+  promoterUsername: string | null;
+}
 
 export type Site = 'COM' | 'CN';
 

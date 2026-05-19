@@ -2,14 +2,11 @@ import { useMemo, useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useAuthStore } from '@/store/authStore';
 import { usePromotionStore } from '@/store/promotionStore';
-import { getDataScope, hasCapability, maskPhone } from '@/auth/permissions';
-import type { PromotionLink } from '@/types';
+import { getDataScope, hasCapability } from '@/auth/permissions';
 import { getAggregatedDaily } from '@/mock/timeseries';
 import type { DailyMetric } from '@/mock/timeseries';
 import { Card } from '@/components/Card';
-import { InlineRemarkField } from '@/components/InlineRemarkField';
 import { MetricCard } from '@/components/MetricCard';
-import { Table } from '@/components/Table';
 import { DateRangeFilter } from '@/components/DateRangeFilter';
 
 function filterByRange<T extends { date: string }>(data: T[], days: number, start: string, end: string): T[] {
@@ -50,31 +47,30 @@ function buildCompareData(current: DailyMetric[], full: DailyMetric[]) {
 
 export function PromotionDashboardPage() {
   const { currentUser } = useAuthStore();
-  const { links, registeredUsers, updateLink } = usePromotionStore();
-  const canManageLinks = hasCapability(currentUser.role, 'managePromotionLinks');
+  const { links } = usePromotionStore();
 
   const scope = getDataScope(currentUser.role);
   const canSeeRevenue = hasCapability(currentUser.role, 'viewRevenue');
-  const canSeePhoneFull = hasCapability(currentUser.role, 'viewPhoneFull');
 
   const visibleLinks = useMemo(
     () => (scope === 'ALL' ? links : links.filter((l) => l.ownerId === currentUser.id)),
     [links, scope, currentUser.id],
   );
 
-  const visibleLinkIds = useMemo(() => new Set(visibleLinks.map((l) => l.id)), [visibleLinks]);
-  const visibleUsers = useMemo(
-    () => registeredUsers.filter((u) => visibleLinkIds.has(u.linkId)),
-    [registeredUsers, visibleLinkIds],
-  );
-
-  const linkMap = useMemo(() => {
-    const m = new Map<string, PromotionLink>();
-    visibleLinks.forEach((l) => m.set(l.id, l));
-    return m;
+  const promoters = useMemo(() => {
+    const map = new Map<string, string>();
+    visibleLinks.forEach((l) => map.set(l.ownerId, l.ownerName));
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
   }, [visibleLinks]);
 
-  const fullDaily = useMemo(() => getAggregatedDaily(visibleLinks.map((l) => l.id)), [visibleLinks]);
+  const [promoterId, setPromoterId] = useState<string>('ALL');
+
+  const filteredLinks = useMemo(
+    () => (promoterId === 'ALL' ? visibleLinks : visibleLinks.filter((l) => l.ownerId === promoterId)),
+    [visibleLinks, promoterId],
+  );
+
+  const fullDaily = useMemo(() => getAggregatedDaily(filteredLinks.map((l) => l.id)), [filteredLinks]);
 
   const [days, setDays] = useState(7);
   const [compare, setCompare] = useState(false);
@@ -110,16 +106,37 @@ export function PromotionDashboardPage() {
         <h2 className="text-lg font-semibold text-slate-800">推广链接数据看板</h2>
       </div>
 
-      <DateRangeFilter
-        days={days}
-        onDaysChange={setDays}
-        compare={compare}
-        onCompareChange={setCompare}
-        startDate={startDate}
-        endDate={endDate}
-        onStartChange={setStartDate}
-        onEndChange={setEndDate}
-      />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {promoters.length > 1 ? (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-500">推广人</span>
+            <select
+              value={promoterId}
+              onChange={(e) => setPromoterId(e.target.value)}
+              className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+            >
+              <option value="ALL">全员</option>
+              {promoters.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <span />
+        )}
+        <DateRangeFilter
+          days={days}
+          onDaysChange={setDays}
+          compare={compare}
+          onCompareChange={setCompare}
+          startDate={startDate}
+          endDate={endDate}
+          onStartChange={setStartDate}
+          onEndChange={setEndDate}
+        />
+      </div>
 
       {/* 收入：仅高权限可见，放在第一位 */}
       {canSeeRevenue && (
@@ -185,7 +202,7 @@ export function PromotionDashboardPage() {
           className="col-span-1 h-full"
           label="总访问量"
           value={totals.visits}
-          sub={`${visibleLinks.length} 条推广链接`}
+          sub={`${filteredLinks.length} 条推广链接`}
           prevValue={prevTotals.visits}
         />
         <div className="col-span-2">
@@ -234,100 +251,6 @@ export function PromotionDashboardPage() {
         </div>
       </div>
 
-      <Card title="推广链接明细">
-        <Table
-          rowKey={(r) => r.id}
-          data={visibleLinks}
-          columns={[
-            { key: 'ownerName', title: '推广人' },
-            {
-              key: 'name',
-              title: '推广链接 / 码',
-              render: (r) => (
-                <div>
-                  <p className="font-medium text-slate-800">{r.name}</p>
-                  <p className="text-xs text-slate-400">{r.code}</p>
-                </div>
-              ),
-            },
-            ...(canManageLinks
-              ? [
-                  {
-                    key: 'remark',
-                    title: '备注',
-                    render: (r: PromotionLink) => (
-                      <InlineRemarkField
-                        key={r.id}
-                        value={r.remark ?? ''}
-                        onSave={(v) => updateLink(r.id, { remark: v || undefined })}
-                      />
-                    ),
-                  },
-                ]
-              : [
-                  {
-                    key: 'remark',
-                    title: '备注',
-                    render: (r: PromotionLink) => (
-                      <span className="text-slate-600">{r.remark || <span className="text-slate-300">-</span>}</span>
-                    ),
-                  },
-                ]),
-            { key: 'visits', title: '访问量', render: (r) => r.visits.toLocaleString() },
-            { key: 'registrations', title: '注册量', render: (r) => r.registrations.toLocaleString() },
-            { key: 'payments', title: '付费量', render: (r) => r.payments.toLocaleString() },
-            ...(canSeeRevenue
-              ? [
-                  {
-                    key: 'revenue',
-                    title: '总收入',
-                    render: (r: PromotionLink) => (
-                      <span className="font-medium text-brand-700">¥ {r.revenue.toLocaleString()}</span>
-                    ),
-                  },
-                ]
-              : []),
-          ]}
-        />
-      </Card>
-
-      <Card
-        title="新用户列表"
-        extra={<span className="text-xs text-slate-400">注册用户明细（按当前权限范围过滤）</span>}
-      >
-        <Table
-          rowKey={(r) => r.id}
-          data={visibleUsers}
-          columns={[
-            { key: 'registeredAt', title: '注册时间' },
-            {
-              key: 'phone',
-              title: '注册手机号',
-              render: (r) => (
-                <span className="font-mono text-slate-700">{canSeePhoneFull ? r.phone : maskPhone(r.phone)}</span>
-              ),
-            },
-            {
-              key: 'link',
-              title: '来源推广链接',
-              render: (r) => {
-                const l = linkMap.get(r.linkId);
-                return l ? `${l.name}（${l.code}）` : '-';
-              },
-            },
-            {
-              key: 'paid',
-              title: '付费',
-              render: (r) =>
-                r.paidAmount !== null ? (
-                  <span className="font-medium text-slate-800">${r.paidAmount}</span>
-                ) : (
-                  <span className="text-slate-400">-</span>
-                ),
-            },
-          ]}
-        />
-      </Card>
     </div>
   );
 }
