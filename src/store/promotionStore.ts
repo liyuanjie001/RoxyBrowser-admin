@@ -44,6 +44,9 @@ interface CreatePayload {
   code?: string;
   ownerName: string;
   ownerId: string;
+  operatorName: string;
+  linkedUsername?: string;
+  inviteId?: string;
   utmSource?: string;
   utmMedium?: string;
   utmCampaign?: string;
@@ -81,17 +84,19 @@ interface PromotionState {
 export const usePromotionStore = create<PromotionState>()((set) => ({
   links: mockPromotionLinks,
   registeredUsers: mockRegisteredUsers,
-  addLink: ({ name, code, ownerName, ownerId, utmSource, utmMedium, utmCampaign, utmContent, utmTerm, bdCode, remark, createdAt }) =>
+  addLink: ({ name, code, ownerName, ownerId, operatorName, linkedUsername, inviteId: providedInviteId, utmSource, utmMedium, utmCampaign, utmContent, utmTerm, bdCode, remark, createdAt }) =>
     set((s) => {
       idCounter++;
       const promoter = useMarketingStore.getState().promoters.find((p) => p.name === ownerName);
-      const inviteId = promoter?.inviteCode ?? genInviteId();
+      const inviteId = providedInviteId?.trim() || promoter?.inviteCode || genInviteId();
       const finalCode = code?.trim() || `REF-${idCounter}`;
       const newLink: PromotionLink = {
         id: `pl-${idCounter}`,
         ownerId,
         ownerName,
         ownerUsername: ownerName,
+        operatorName,
+        linkedUsername: linkedUsername?.trim() || undefined,
         name,
         code: finalCode,
         inviteId,

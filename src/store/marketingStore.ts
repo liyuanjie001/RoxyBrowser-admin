@@ -5,8 +5,9 @@ export interface Promoter {
   id: string;
   name: string;
   bdCode: string;
-  /** 推广人唯一邀请码，6 位小写字母+数字，同一推广人下所有推广链接共用 */
+  /** 推广人(BD)唯一邀请码，6 位小写字母+数字，同一推广人(BD)下所有推广链接共用 */
   inviteCode: string;
+  operatorName: string;
 }
 
 export type UtmCategory = 'source' | 'medium' | 'campaign' | 'content' | 'term';
@@ -14,6 +15,7 @@ export type UtmCategory = 'source' | 'medium' | 'campaign' | 'content' | 'term';
 export interface UtmOption {
   key: string;
   label: string;
+  operatorName: string;
 }
 
 export type UtmDict = Record<UtmCategory, UtmOption[]>;
@@ -21,8 +23,8 @@ export type UtmDict = Record<UtmCategory, UtmOption[]>;
 interface State {
   promoters: Promoter[];
   utm: UtmDict;
-  /** 仅传姓名；推广码由 bd_<拼音首字母><两位序号> 自动生成 */
-  addPromoter: (p: { name: string }) => void;
+  /** 仅传姓名 + 操作人；推广码由 bd_<拼音首字母><两位序号> 自动生成 */
+  addPromoter: (p: { name: string; operatorName: string }) => void;
   /** 仅允许改姓名，bdCode 终生不变 */
   updatePromoter: (id: string, patch: { name: string }) => void;
   removePromoter: (id: string) => void;
@@ -55,67 +57,67 @@ function genInviteCode(existing: Promoter[]): string {
 const initialPromoters: Promoter[] = (() => {
   const list: Promoter[] = [];
   // 用确定性邀请码对齐已有 mock 链接里的 inviteId
-  const seeds: { name: string; inviteCode: string }[] = [
-    { name: '李思雨', inviteCode: 'k7mp2x' },
-    { name: '赵小峰', inviteCode: 'b8tk4d' },
-    { name: '陈国栋', inviteCode: 'd9hy5n' },
+  const seeds: { name: string; inviteCode: string; operatorName: string }[] = [
+    { name: '李思雨', inviteCode: 'k7mp2x', operatorName: '陈国栋' },
+    { name: '赵小峰', inviteCode: 'b8tk4d', operatorName: '陈国栋' },
+    { name: '陈国栋', inviteCode: 'd9hy5n', operatorName: '陈国栋' },
   ];
-  for (const { name, inviteCode } of seeds) {
+  for (const { name, inviteCode, operatorName } of seeds) {
     pidCounter++;
-    list.push({ id: `pm-${pidCounter - 100}`, name, bdCode: genBdCode(name, list), inviteCode });
+    list.push({ id: `pm-${pidCounter - 100}`, name, bdCode: genBdCode(name, list), inviteCode, operatorName });
   }
   return list;
 })();
 
 const initialUtm: UtmDict = {
   source: [
-    { key: 'normal', label: 'normal（默认 / 普通链接）' },
-    { key: 'tiktok', label: 'tiktok（TikTok）' },
-    { key: 'telegram', label: 'telegram（Telegram）' },
-    { key: 'wechat', label: 'wechat（微信群 / 私域）' },
-    { key: 'agent', label: 'agent（代理）' },
-    { key: 'kol', label: 'kol（达人合作）' },
-    { key: 'official_site', label: 'official_site（官网）' },
-    { key: 'xiaohongshu', label: 'xiaohongshu（小红书）' },
+    { key: 'normal', label: 'normal（默认 / 普通链接）', operatorName: '系统' },
+    { key: 'tiktok', label: 'tiktok（TikTok）', operatorName: '陈国栋' },
+    { key: 'telegram', label: 'telegram（Telegram）', operatorName: '陈国栋' },
+    { key: 'wechat', label: 'wechat（微信群 / 私域）', operatorName: '陈国栋' },
+    { key: 'agent', label: 'agent（代理）', operatorName: '李思雨' },
+    { key: 'kol', label: 'kol（达人合作）', operatorName: '李思雨' },
+    { key: 'official_site', label: 'official_site（官网）', operatorName: '陈国栋' },
+    { key: 'xiaohongshu', label: 'xiaohongshu（小红书）', operatorName: '李思雨' },
   ],
   medium: [
-    { key: 'none', label: 'none（默认 / 不指定）' },
-    { key: 'video', label: 'video（短视频）' },
-    { key: 'post', label: 'post（图文帖子）' },
-    { key: 'group', label: 'group（社群群发）' },
-    { key: 'private_msg', label: 'private_msg（私聊转发）' },
-    { key: 'banner', label: 'banner（广告横幅）' },
-    { key: 'email', label: 'email（邮件推送）' },
+    { key: 'none', label: 'none（默认 / 不指定）', operatorName: '系统' },
+    { key: 'video', label: 'video（短视频）', operatorName: '李思雨' },
+    { key: 'post', label: 'post（图文帖子）', operatorName: '李思雨' },
+    { key: 'group', label: 'group（社群群发）', operatorName: '赵小峰' },
+    { key: 'private_msg', label: 'private_msg（私聊转发）', operatorName: '赵小峰' },
+    { key: 'banner', label: 'banner（广告横幅）', operatorName: '陈国栋' },
+    { key: 'email', label: 'email（邮件推送）', operatorName: '陈国栋' },
   ],
   campaign: [
-    { key: 'none', label: 'none（默认 / 不指定）' },
-    { key: '2026_q2_invite', label: '2026_q2_invite（Q2 邀请活动）' },
-    { key: '2026_may_kol', label: '2026_may_kol（5 月 KOL 合作）' },
+    { key: 'none', label: 'none（默认 / 不指定）', operatorName: '系统' },
+    { key: '2026_q2_invite', label: '2026_q2_invite（Q2 邀请活动）', operatorName: '陈国栋' },
+    { key: '2026_may_kol', label: '2026_may_kol（5 月 KOL 合作）', operatorName: '李思雨' },
   ],
   content: [
-    { key: 'none', label: 'none（默认 / 不指定）' },
-    { key: 'banner_a', label: 'banner_a（横幅 A）' },
-    { key: 'banner_b', label: 'banner_b（横幅 B）' },
-    { key: 'video_15s', label: 'video_15s（15 秒短视频）' },
+    { key: 'none', label: 'none（默认 / 不指定）', operatorName: '系统' },
+    { key: 'banner_a', label: 'banner_a（横幅 A）', operatorName: '陈国栋' },
+    { key: 'banner_b', label: 'banner_b（横幅 B）', operatorName: '陈国栋' },
+    { key: 'video_15s', label: 'video_15s（15 秒短视频）', operatorName: '李思雨' },
   ],
   term: [
-    { key: 'none', label: 'none（默认 / 不指定）' },
-    { key: 'browser', label: 'browser（关键词：浏览器）' },
-    { key: 'anti_detect', label: 'anti_detect（关键词：指纹浏览器）' },
+    { key: 'none', label: 'none（默认 / 不指定）', operatorName: '系统' },
+    { key: 'browser', label: 'browser（关键词：浏览器）', operatorName: '陈国栋' },
+    { key: 'anti_detect', label: 'anti_detect（关键词：指纹浏览器）', operatorName: '陈国栋' },
   ],
 };
 
 export const useMarketingStore = create<State>()((set) => ({
   promoters: initialPromoters,
   utm: initialUtm,
-  addPromoter: ({ name }) =>
+  addPromoter: ({ name, operatorName }) =>
     set((s) => {
       const trimmed = name.trim();
       if (!trimmed) return s;
       pidCounter++;
       const bdCode = genBdCode(trimmed, s.promoters);
       const inviteCode = genInviteCode(s.promoters);
-      return { promoters: [...s.promoters, { id: `pm-${pidCounter}`, name: trimmed, bdCode, inviteCode }] };
+      return { promoters: [...s.promoters, { id: `pm-${pidCounter}`, name: trimmed, bdCode, inviteCode, operatorName }] };
     }),
   updatePromoter: (id, { name }) =>
     set((s) => ({ promoters: s.promoters.map((x) => (x.id === id ? { ...x, name: name.trim() || x.name } : x)) })),

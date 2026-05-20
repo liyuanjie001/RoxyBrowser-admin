@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { mockEndUsers } from '@/mock/data';
 import type { EndUser, UserIdentity } from '@/types';
 import { USER_IDENTITIES } from '@/types';
+import { usePromotionStore } from '@/store/promotionStore';
 import { Card } from '@/components/Card';
 import { Table } from '@/components/Table';
 
@@ -44,6 +45,17 @@ function CopyableText({ value }: { value: string | null }) {
 }
 
 export function UserListPage() {
+  const links = usePromotionStore((s) => s.links);
+  const promoterNameByUsername = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const l of links) {
+      if (l.ownerUsername && !m.has(l.ownerUsername)) m.set(l.ownerUsername, l.ownerName);
+    }
+    return m;
+  }, [links]);
+  const resolvePromoterName = (username: string | null) =>
+    username ? promoterNameByUsername.get(username) ?? username : '';
+
   const [keyword, setKeyword] = useState('');
   const [identityQ, setIdentityQ] = useState<'' | UserIdentity>('');
   const [contactsQ, setContactsQ] = useState<ContactKind[]>([]);
@@ -91,19 +103,20 @@ export function UserListPage() {
       if (applied.contactsQ.includes('email') && !u.email) return false;
       if (applied.promoterQ) {
         const pq = applied.promoterQ.toLowerCase();
-        if (!u.promoterUsername || !u.promoterUsername.toLowerCase().includes(pq)) return false;
+        const name = resolvePromoterName(u.promoterUsername).toLowerCase();
+        if (!name.includes(pq)) return false;
       }
       return true;
     });
-  }, [applied]);
+  }, [applied, promoterNameByUsername]);
 
   const exportCsv = () => {
-    const header = ['ID', '用户名', '推广用户名', '邮箱', '手机号', '身份', '折扣', '总充值', '余额', '来源'];
+    const header = ['ID', '用户名', '推广人(BD)', '邮箱', '手机号', '身份', '折扣', '总充值', '余额', '来源'];
     const lines = filtered.map((u) =>
       [
         u.id,
         u.username,
-        u.promoterUsername ?? '',
+        resolvePromoterName(u.promoterUsername),
         u.email ?? '',
         u.phone ?? '',
         u.identity,
@@ -171,7 +184,7 @@ export function UserListPage() {
 
           <input
             className="input max-w-[14rem]"
-            placeholder="推广用户名"
+            placeholder="推广人(BD)"
             value={promoterQ}
             onChange={(e) => setPromoterQ(e.target.value)}
           />
@@ -229,16 +242,17 @@ export function UserListPage() {
             },
             {
               key: 'promoterUsername',
-              title: '推广用户名',
-              render: (r) =>
-                r.promoterUsername ? (
+              title: '推广人(BD)',
+              render: (r) => {
+                if (!r.promoterUsername) return <span className="text-slate-300">-</span>;
+                const name = resolvePromoterName(r.promoterUsername);
+                return (
                   <span className="inline-flex items-center gap-1">
-                    <span className="font-mono text-slate-700">{r.promoterUsername}</span>
-                    <CopyButton text={r.promoterUsername} />
+                    <span className="text-slate-700">{name}</span>
+                    <CopyButton text={name} />
                   </span>
-                ) : (
-                  <span className="text-slate-300">-</span>
-                ),
+                );
+              },
             },
             {
               key: 'email',

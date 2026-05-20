@@ -124,7 +124,7 @@ export function UserPromotionLinkTable() {
             ))}
           </select>
           <MultiSelect
-            placeholder="推广人姓名"
+            placeholder="推广人(BD)姓名"
             options={promoterOptions}
             value={promotersQ}
             onChange={setPromotersQ}
@@ -172,7 +172,7 @@ export function UserPromotionLinkTable() {
             },
             {
               key: 'ownerName',
-              title: '推广人姓名',
+              title: '推广人(BD)姓名',
               render: (r) => <span className="text-slate-700">{r.ownerName}</span>,
             },
             {

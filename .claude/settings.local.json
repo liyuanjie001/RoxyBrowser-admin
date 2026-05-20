@@ -3,7 +3,10 @@
     "allow": [
       "Bash(npm install *)",
       "Bash(npm run *)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(git add *)",
+      "Bash(git commit -m 'feat: 推广看板增按推广人\\(BD\\)聚合，营销管理补操作人/兑换码/钱包现金券 *)",
+      "Bash(git push *)"
     ]
   },
   "enabledMcpjsonServers": [

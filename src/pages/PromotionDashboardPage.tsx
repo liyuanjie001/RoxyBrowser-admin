@@ -3,11 +3,12 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { useAuthStore } from '@/store/authStore';
 import { usePromotionStore } from '@/store/promotionStore';
 import { getDataScope, hasCapability } from '@/auth/permissions';
-import { getAggregatedDaily } from '@/mock/timeseries';
+import { getAggregatedDaily, promotionDailyData } from '@/mock/timeseries';
 import type { DailyMetric } from '@/mock/timeseries';
 import { Card } from '@/components/Card';
 import { MetricCard } from '@/components/MetricCard';
 import { DateRangeFilter } from '@/components/DateRangeFilter';
+import { Table } from '@/components/Table';
 
 function filterByRange<T extends { date: string }>(data: T[], days: number, start: string, end: string): T[] {
   if (days > 0) {
@@ -76,6 +77,7 @@ export function PromotionDashboardPage() {
   const [compare, setCompare] = useState(false);
   const [startDate, setStartDate] = useState('2026-05-06');
   const [endDate, setEndDate] = useState('2026-05-13');
+  const [tablePromoterId, setTablePromoterId] = useState<string>('ALL');
 
   const currentData = useMemo(() => filterByRange(fullDaily, days, startDate, endDate), [fullDaily, days, startDate, endDate]);
   const chartData = useMemo(() => (compare ? buildCompareData(currentData, fullDaily) : currentData), [compare, currentData, fullDaily]);
@@ -99,6 +101,41 @@ export function PromotionDashboardPage() {
     };
   }, [currentData, fullDaily]);
 
+  const promoterRows = useMemo(() => {
+    const groups = new Map<
+      string,
+      { ownerId: string; ownerName: string; linkCount: number; visits: number; registrations: number; payments: number; revenue: number }
+    >();
+    const sourceLinks = tablePromoterId === 'ALL' ? visibleLinks : visibleLinks.filter((l) => l.ownerId === tablePromoterId);
+    for (const link of sourceLinks) {
+      const series = promotionDailyData[link.id] ?? [];
+      const inRange = filterByRange(series, days, startDate, endDate);
+      const visits = sumKey(inRange, 'visits');
+      const registrations = sumKey(inRange, 'registrations');
+      const payments = sumKey(inRange, 'payments');
+      const revenue = sumKey(inRange, 'revenue');
+      const existing = groups.get(link.ownerId);
+      if (existing) {
+        existing.linkCount += 1;
+        existing.visits += visits;
+        existing.registrations += registrations;
+        existing.payments += payments;
+        existing.revenue += revenue;
+      } else {
+        groups.set(link.ownerId, {
+          ownerId: link.ownerId,
+          ownerName: link.ownerName,
+          linkCount: 1,
+          visits,
+          registrations,
+          payments,
+          revenue,
+        });
+      }
+    }
+    return Array.from(groups.values()).sort((a, b) => b.visits - a.visits);
+  }, [visibleLinks, tablePromoterId, days, startDate, endDate]);
+
 
   return (
     <div className="space-y-6">
@@ -109,7 +146,7 @@ export function PromotionDashboardPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         {promoters.length > 1 ? (
           <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-500">推广人</span>
+            <span className="text-xs text-slate-500">推广人(BD)</span>
             <select
               value={promoterId}
               onChange={(e) => setPromoterId(e.target.value)}
@@ -250,6 +287,84 @@ export function PromotionDashboardPage() {
           </Card>
         </div>
       </div>
+
+      {/* 按推广人(BD)维度汇总表 */}
+      <Card
+        title="按推广人(BD)维度"
+        extra={
+          promoters.length > 1 ? (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-500">推广人(BD)</span>
+              <select
+                value={tablePromoterId}
+                onChange={(e) => setTablePromoterId(e.target.value)}
+                className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+              >
+                <option value="ALL">全员</option>
+                {promoters.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : null
+        }
+      >
+        <Table
+          columns={[
+            {
+              key: 'ownerName',
+              title: '推广人(BD)',
+              render: (row) => <span className="font-medium text-slate-800">{row.ownerName}</span>,
+            },
+            {
+              key: 'linkCount',
+              title: '推广链接',
+              sortable: true,
+              sortValue: (row) => row.linkCount,
+              render: (row) => <span className="tabular-nums">{row.linkCount}</span>,
+            },
+            {
+              key: 'visits',
+              title: '访问量',
+              sortable: true,
+              sortValue: (row) => row.visits,
+              render: (row) => <span className="tabular-nums">{row.visits.toLocaleString()}</span>,
+            },
+            {
+              key: 'registrations',
+              title: '注册量',
+              sortable: true,
+              sortValue: (row) => row.registrations,
+              render: (row) => <span className="tabular-nums">{row.registrations.toLocaleString()}</span>,
+            },
+            {
+              key: 'payments',
+              title: '付费量',
+              sortable: true,
+              sortValue: (row) => row.payments,
+              render: (row) => <span className="tabular-nums">{row.payments.toLocaleString()}</span>,
+            },
+            ...(canSeeRevenue
+              ? [
+                  {
+                    key: 'revenue',
+                    title: '收入（¥）',
+                    sortable: true,
+                    sortValue: (row: typeof promoterRows[number]) => row.revenue,
+                    render: (row: typeof promoterRows[number]) => (
+                      <span className="tabular-nums">¥ {row.revenue.toLocaleString()}</span>
+                    ),
+                  },
+                ]
+              : []),
+          ]}
+          data={promoterRows}
+          rowKey={(row) => row.ownerId}
+          emptyText="当前筛选下暂无推广人(BD)数据"
+        />
+      </Card>
 
     </div>
   );

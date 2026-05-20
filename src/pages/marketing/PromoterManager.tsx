@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useMarketingStore } from '@/store/marketingStore';
 import type { Promoter } from '@/store/marketingStore';
+import { useAuthStore } from '@/store/authStore';
 import { Card } from '@/components/Card';
 import { Table } from '@/components/Table';
 import { Modal } from '@/components/Modal';
@@ -13,6 +14,7 @@ const empty: Form = { name: '' };
 
 export function PromoterManager() {
   const { promoters, addPromoter, updatePromoter, removePromoter } = useMarketingStore();
+  const { currentUser } = useAuthStore();
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<Promoter | null>(null);
   const [form, setForm] = useState<Form>(empty);
@@ -24,7 +26,7 @@ export function PromoterManager() {
 
   const submitCreate = () => {
     if (!form.name.trim()) return;
-    addPromoter({ name: form.name.trim() });
+    addPromoter({ name: form.name.trim(), operatorName: currentUser.realName });
     setCreateOpen(false);
   };
 
@@ -43,13 +45,13 @@ export function PromoterManager() {
   return (
     <>
       <Card
-        title="推广用户人管理"
+        title="推广人(BD)管理"
         extra={
           <button className="btn-primary" onClick={openCreate}>
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            新增推广人
+            新增推广人(BD)
           </button>
         }
       >
@@ -58,26 +60,8 @@ export function PromoterManager() {
           data={promoters}
           columns={[
             { key: 'name', title: '姓名', render: (r) => <span className="font-medium text-slate-800">{r.name}</span> },
-            {
-              key: 'inviteCode',
-              title: '邀请码',
-              render: (r) => (
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="font-mono text-brand-700">{r.inviteCode}</span>
-                  <button
-                    type="button"
-                    className="text-slate-300 hover:text-brand-600"
-                    title="复制邀请码"
-                    onClick={() => navigator.clipboard?.writeText(r.inviteCode)}
-                  >
-                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16h8a2 2 0 002-2V6a2 2 0 00-2-2H8a2 2 0 00-2 2v8a2 2 0 002 2zM4 12v6a2 2 0 002 2h8" />
-                    </svg>
-                  </button>
-                </span>
-              ),
-            },
             { key: 'bdCode', title: 'bd_code', render: (r) => <span className="font-mono text-slate-700">{r.bdCode}</span> },
+            { key: 'operatorName', title: '操作人', render: (r) => <span className="text-slate-600">{r.operatorName}</span> },
             {
               key: 'action',
               title: '操作',
@@ -87,7 +71,7 @@ export function PromoterManager() {
                   <button
                     className="btn-ghost !py-1 text-rose-600 hover:text-rose-700"
                     onClick={() => {
-                      if (confirm(`确认删除推广人「${r.name}」？`)) removePromoter(r.id);
+                      if (confirm(`确认删除推广人(BD)「${r.name}」？`)) removePromoter(r.id);
                     }}
                   >
                     删除
@@ -101,7 +85,7 @@ export function PromoterManager() {
 
       <Modal
         open={createOpen}
-        title="新增推广人"
+        title="新增推广人(BD)"
         onClose={() => setCreateOpen(false)}
         footer={
           <>
@@ -115,7 +99,7 @@ export function PromoterManager() {
 
       <Modal
         open={!!editing}
-        title="修改推广人"
+        title="修改推广人(BD)"
         onClose={() => setEditing(null)}
         footer={
           <>
@@ -151,20 +135,7 @@ function PromoterFormFields({
         />
       </div>
       <div>
-        <label className="label">邀请码</label>
-        <input
-          className="input font-mono bg-slate-50"
-          value={promoter?.inviteCode ?? '保存后自动生成（6 位随机）'}
-          readOnly
-        />
-        <p className="mt-1 text-xs text-slate-400">
-          {promoter
-            ? '推广人与邀请码一对一绑定，创建后不可修改'
-            : '新增推广人时由系统生成 6 位唯一邀请码，名下所有推广链接共用'}
-        </p>
-      </div>
-      <div>
-        <label className="label">推广人 bd_code</label>
+        <label className="label">推广人(BD) bd_code</label>
         <input
           className="input font-mono bg-slate-50"
           value={promoter?.bdCode ?? '保存后自动生成（bd_<拼音首字母><序号>）'}

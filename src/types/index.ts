@@ -21,6 +21,8 @@ export interface PromotionLink {
   ownerId: string;
   ownerName: string;
   ownerUsername: string;
+  operatorName: string;
+  linkedUsername?: string;
   name: string;
   code: string;
   inviteId: string;
@@ -60,15 +62,17 @@ export interface RegisteredUser {
   paidAmount: number | null;
 }
 
-export type CouponType = 'FULL_REDUCTION' | 'DISCOUNT';
+export type CouponType = 'FULL_REDUCTION' | 'DISCOUNT' | 'WALLET_CASH';
 
 export interface CouponBase {
   id: string;
   name: string;
   type: CouponType;
+  redeemCode: string;
   validFrom: string;
   validTo: string;
   createdAt: string;
+  operatorName: string;
 }
 
 export interface FullReductionCoupon extends CouponBase {
@@ -82,7 +86,12 @@ export interface DiscountCoupon extends CouponBase {
   discountPercent: number;
 }
 
-export type Coupon = FullReductionCoupon | DiscountCoupon;
+export interface WalletCashCoupon extends CouponBase {
+  type: 'WALLET_CASH';
+  amount: number;
+}
+
+export type Coupon = FullReductionCoupon | DiscountCoupon | WalletCashCoupon;
 
 export type UserSource = '直接注册' | '谷歌注册' | 'github注册' | null;
 

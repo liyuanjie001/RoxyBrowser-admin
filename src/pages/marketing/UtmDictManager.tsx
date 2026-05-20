@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useMarketingStore } from '@/store/marketingStore';
 import type { UtmCategory, UtmOption } from '@/store/marketingStore';
+import { useAuthStore } from '@/store/authStore';
 import { Card } from '@/components/Card';
 import { Table } from '@/components/Table';
 import { Modal } from '@/components/Modal';
@@ -22,6 +23,7 @@ const empty: Form = { key: '', label: '' };
 export function UtmDictManager() {
   const [active, setActive] = useState<UtmCategory>('source');
   const { utm, addUtm, updateUtm, removeUtm } = useMarketingStore();
+  const { currentUser } = useAuthStore();
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<UtmOption | null>(null);
@@ -43,7 +45,7 @@ export function UtmDictManager() {
       alert(`key「${key}」已存在`);
       return;
     }
-    addUtm(active, { key, label });
+    addUtm(active, { key, label, operatorName: currentUser.realName });
     setCreateOpen(false);
   };
 
@@ -99,6 +101,7 @@ export function UtmDictManager() {
             columns={[
               { key: 'key', title: 'key', render: (r) => <span className="font-mono text-slate-700">{r.key}</span> },
               { key: 'label', title: '显示名称', render: (r) => <span className="text-slate-700">{r.label}</span> },
+              { key: 'operatorName', title: '操作人', render: (r) => <span className="text-slate-600">{r.operatorName}</span> },
               {
                 key: 'action',
                 title: '操作',

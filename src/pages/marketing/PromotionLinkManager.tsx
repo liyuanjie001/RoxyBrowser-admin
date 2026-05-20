@@ -3,7 +3,6 @@ import { usePromotionStore, buildPromotionUrl } from '@/store/promotionStore';
 import { useAuthStore } from '@/store/authStore';
 import { useMarketingStore } from '@/store/marketingStore';
 import type { UtmCategory } from '@/store/marketingStore';
-import type { PromotionLink } from '@/types';
 import { Card } from '@/components/Card';
 import { InlineRemarkField } from '@/components/InlineRemarkField';
 import { Table } from '@/components/Table';
@@ -15,6 +14,8 @@ interface LinkForm {
   name: string;
   ownerName: string;
   remark: string;
+  inviteCode: string;
+  linkedUsername: string;
   utmSource: string;
   utmMedium: string;
   utmCampaign: string;
@@ -27,6 +28,8 @@ const emptyForm: LinkForm = {
   name: '',
   ownerName: '',
   remark: '',
+  inviteCode: '',
+  linkedUsername: '',
   utmSource: 'normal',
   utmMedium: 'none',
   utmCampaign: 'none',
@@ -93,22 +96,17 @@ function LinkFormFields({
   previewLabel,
   previewUrl,
   onCopy,
-  isEdit,
-  inviteId,
 }: {
   form: LinkForm;
   onChange: (f: LinkForm) => void;
   previewLabel: string;
   previewUrl: string;
   onCopy: (text: string) => void;
-  isEdit: boolean;
-  inviteId?: string;
 }) {
   const promoters = useMarketingStore((s) => s.promoters);
   const set = (patch: Partial<LinkForm>) => onChange({ ...form, ...patch });
 
   const matchedPromoter = promoters.find((p) => p.name === form.ownerName);
-  const displayInviteCode = isEdit ? inviteId ?? '' : matchedPromoter?.inviteCode ?? '';
 
   return (
     <div className="space-y-4">
@@ -123,16 +121,16 @@ function LinkFormFields({
           />
         </div>
         <div>
-          <label className="label">推广人</label>
+          <label className="label">推广人(BD)</label>
           <select
             className="input"
             value={matchedPromoter?.id ?? ''}
             onChange={(e) => {
               const p = promoters.find((x) => x.id === e.target.value);
-              if (p) set({ ownerName: p.name, bdCode: p.bdCode });
+              if (p) set({ ownerName: p.name, bdCode: p.bdCode, inviteCode: p.inviteCode });
             }}
           >
-            {!matchedPromoter && <option value="" disabled>请选择推广人</option>}
+            {!matchedPromoter && <option value="" disabled>请选择推广人(BD)</option>}
             {promoters.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}（{p.bdCode}）
@@ -144,23 +142,25 @@ function LinkFormFields({
 
       <div>
         <label className="label">邀请码</label>
-        <div className="flex items-center gap-2">
-          <input
-            className="input font-mono bg-slate-50"
-            value={displayInviteCode || '请先选择推广人'}
-            readOnly
-          />
-          {displayInviteCode && (
-            <button type="button" className="btn-ghost" onClick={() => onCopy(displayInviteCode)}>
-              复制
-            </button>
-          )}
-        </div>
+        <input
+          className="input font-mono"
+          value={form.inviteCode}
+          onChange={(e) => set({ inviteCode: e.target.value.trim() })}
+          placeholder="选择推广人(BD)后自动带出，可手动修改"
+        />
         <p className="mt-1 text-xs text-slate-400">
-          {isEdit
-            ? '邀请码与推广人一对一绑定，不可修改'
-            : '选择推广人后自动填充，同一推广人名下所有链接共用一个邀请码'}
+          可自定义邀请码；选择推广人(BD)后默认填充其邀请码，建议保持唯一。
         </p>
+      </div>
+
+      <div>
+        <label className="label">关联用户</label>
+        <input
+          className="input"
+          value={form.linkedUsername}
+          onChange={(e) => set({ linkedUsername: e.target.value })}
+          placeholder="关联用户的帐号"
+        />
       </div>
 
       <div className="rounded-lg border border-slate-200 bg-slate-50/60 p-3">
@@ -182,17 +182,9 @@ function LinkFormFields({
             <label className="label">utm_content（素材区分）</label>
             <UtmSelect cat="content" value={form.utmContent} onChange={(v) => set({ utmContent: v.toLowerCase() })} />
           </div>
-          <div>
+          <div className="col-span-2">
             <label className="label">utm_term（关键词 / 竞价词）</label>
             <UtmSelect cat="term" value={form.utmTerm} onChange={(v) => set({ utmTerm: v.toLowerCase() })} />
-          </div>
-          <div>
-            <label className="label">bd_code（商务码）</label>
-            <input
-              className="input font-mono bg-slate-50"
-              value={form.bdCode || '选择推广人后自动带出'}
-              readOnly
-            />
           </div>
         </div>
       </div>
@@ -231,16 +223,13 @@ function LinksTab() {
   const promoters = useMarketingStore((s) => s.promoters);
 
   const [createOpen, setCreateOpen] = useState(false);
-  const [editing, setEditing] = useState<PromotionLink | null>(null);
 
   const [form, setForm] = useState<LinkForm>(emptyForm);
-  const [editForm, setEditForm] = useState<LinkForm>(emptyForm);
 
   const previewInviteId = useMemo(() => 'preview', []);
-  const createPreview = useMemo(() => previewUrl(form, previewInviteId), [form, previewInviteId]);
-  const editPreview = useMemo(
-    () => (editing ? previewUrl(editForm, editing.inviteId) : ''),
-    [editForm, editing],
+  const createPreview = useMemo(
+    () => previewUrl(form, form.inviteCode.trim() || previewInviteId),
+    [form, previewInviteId],
   );
 
   const openCreate = () => {
@@ -249,6 +238,7 @@ function LinksTab() {
       ...emptyForm,
       ownerName: currentUser.realName,
       bdCode: me?.bdCode ?? '',
+      inviteCode: me?.inviteCode ?? '',
     });
     setCreateOpen(true);
   };
@@ -259,6 +249,9 @@ function LinksTab() {
       name: form.name.trim(),
       ownerName: form.ownerName.trim() || currentUser.realName,
       ownerId: currentUser.id,
+      operatorName: currentUser.realName,
+      linkedUsername: form.linkedUsername.trim() || undefined,
+      inviteId: form.inviteCode.trim() || undefined,
       utmSource: form.utmSource,
       utmMedium: form.utmMedium,
       utmCampaign: form.utmCampaign.trim() || 'none',
@@ -268,36 +261,6 @@ function LinksTab() {
       remark: form.remark.trim() || undefined,
     });
     setCreateOpen(false);
-  };
-
-  const openEdit = (link: PromotionLink) => {
-    setEditing(link);
-    setEditForm({
-      name: link.name,
-      ownerName: link.ownerName,
-      remark: link.remark ?? '',
-      utmSource: link.utmSource,
-      utmMedium: link.utmMedium,
-      utmCampaign: link.utmCampaign,
-      utmContent: link.utmContent ?? 'none',
-      utmTerm: link.utmTerm ?? 'none',
-      bdCode: link.bdCode ?? '',
-    });
-  };
-
-  const submitEdit = () => {
-    if (!editing) return;
-    updateLink(editing.id, {
-      name: editForm.name.trim(),
-      ownerName: editForm.ownerName.trim(),
-      utmSource: editForm.utmSource,
-      utmMedium: editForm.utmMedium,
-      utmCampaign: editForm.utmCampaign.trim() || 'none',
-      utmContent: editForm.utmContent.trim() || 'none',
-      utmTerm: editForm.utmTerm.trim() || 'none',
-      bdCode: editForm.bdCode.trim() || undefined,
-    });
-    setEditing(null);
   };
 
   const saveRemark = (id: string, value: string) => {
@@ -336,7 +299,19 @@ function LinksTab() {
               title: '推广链接',
               render: (r) => <span className="font-mono text-xs text-slate-500">{r.url}</span>,
             },
-            { key: 'ownerName', title: '推广人' },
+            { key: 'ownerName', title: '推广人(BD)' },
+            {
+              key: 'linkedUsername',
+              title: '关联用户的帐号',
+              render: (r) => (
+                <span className="text-slate-700">{r.linkedUsername || <span className="text-slate-300">-</span>}</span>
+              ),
+            },
+            {
+              key: 'operatorName',
+              title: '操作人',
+              render: (r) => <span className="text-slate-600">{r.operatorName}</span>,
+            },
             {
               key: 'remark',
               title: '备注',
@@ -345,15 +320,6 @@ function LinksTab() {
               ),
             },
             { key: 'createdAt', title: '创建时间', className: 'text-slate-500' },
-            {
-              key: 'action',
-              title: '操作',
-              render: (r) => (
-                <button className="btn-ghost !py-1" onClick={() => openEdit(r)}>
-                  修改
-                </button>
-              ),
-            },
           ]}
         />
       </Card>
@@ -373,36 +339,10 @@ function LinksTab() {
         <LinkFormFields
           form={form}
           onChange={setForm}
-          previewLabel="链接预览（保存后自动分配邀请码）"
+          previewLabel="链接预览（可自定义邀请码）"
           previewUrl={createPreview}
           onCopy={copyText}
-          isEdit={false}
         />
-      </Modal>
-
-      <Modal
-        open={!!editing}
-        title="修改推广链接"
-        size="xl"
-        onClose={() => setEditing(null)}
-        footer={
-          <>
-            <button className="btn-ghost" onClick={() => setEditing(null)}>取消</button>
-            <button className="btn-primary" onClick={submitEdit}>保存修改</button>
-          </>
-        }
-      >
-        {editing && (
-          <LinkFormFields
-            form={editForm}
-            onChange={setEditForm}
-            previewLabel={`链接预览（邀请码 ${editing.inviteId}）`}
-            previewUrl={editPreview}
-            onCopy={copyText}
-            isEdit
-            inviteId={editing.inviteId}
-          />
-        )}
       </Modal>
     </>
   );
@@ -411,7 +351,7 @@ function LinksTab() {
 type TabKey = 'links' | 'promoters' | 'utm';
 const TABS: { key: TabKey; label: string }[] = [
   { key: 'links', label: '推广链接管理' },
-  { key: 'promoters', label: '推广人管理' },
+  { key: 'promoters', label: '推广人(BD)管理' },
   { key: 'utm', label: 'UTM 参数管理' },
 ];
 
